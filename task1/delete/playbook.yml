@@ -1,0 +1,26 @@
+---
+- name: Remove user accounts
+  hosts: cloudserver
+  become: true
+  vars:
+    delete_username: ""
+
+  tasks:
+    - name: Safeguard to prevent deleting the Ansible user
+      ansible.builtin.fail:
+        msg: "You cannot delete the user running this playbook!"
+      when: delete_username == ansible_user
+
+    - name: Check if user exists
+      ansible.builtin.shell:
+        cmd: "id -u {{ delete_username }}"
+      register: user_exists
+      failed_when: user_exists.rc not in [0,1]
+      changed_when: false
+
+    - name: Ensure user is removed
+      ansible.builtin.user:
+        name: "{{ delete_username }}"
+        state: absent
+        remove: true  
+      when: user_exists.rc == 0

@@ -1,0 +1,65 @@
+---
+- name: Manage user accounts
+  hosts: cloudserver
+  become: true
+  vars:
+    new_username: ""
+
+  tasks:
+    - name: Check if user already exists
+      ansible.builtin.shell:
+        cmd: "id -u {{ new_username }}"
+      register: user_exists
+      failed_when: user_exists.rc not in [0,1] 
+      changed_when: false
+      
+    - name: Ensure user is created (if not exists)
+      ansible.builtin.user:
+        name: "{{ new_username }}"
+        state: present
+        shell: /bin/bash
+      when: user_exists.rc == 1  
+
+    - name: Set home directory permissions
+      ansible.builtin.file:
+        mode: 0750
+        path: /home/{{ new_username }}
+      when: user_exists.rc == 1  
+
+    - name: Ensure .ssh directory exists
+      ansible.builtin.file:
+        path: "/home/{{ new_username }}/.ssh"
+        state: directory
+        owner: "{{ new_username }}"
+        group: "{{ new_username }}"
+        mode: '0700'
+
+    - name: Check if SSH private key exists
+      ansible.builtin.stat:
+        path: "/home/{{ new_username }}/.ssh/id_rsa"
+      register: ssh_key_check
+
+    - name: Generate SSH key pair for the new user (if not exists)
+      ansible.builtin.openssh_keypair:
+        path: "/home/{{ new_username }}/.ssh/id_rsa"
+        type: rsa
+        owner: "{{ new_username }}"
+        group: "{{ new_username }}"
+        mode: '0600'
+      register: ssh_keys
+      when: not ssh_key_check.stat.exists
+
+    - name: Display the public SSH key (if new key generated)
+      ansible.builtin.debug:
+        msg: "Public Key: {{ ssh_keys.public_key }}"
+      when: ssh_keys is defined
+
+    - name: Ensure public key is in authorized_keys
+      ansible.builtin.lineinfile:
+        path: "/home/{{ new_username }}/.ssh/authorized_keys"
+        line: "{{ ssh_keys.public_key }}"
+        create: true
+        owner: "{{ new_username }}"
+        group: "{{ new_username }}"
+        mode: '0600'
+      when: ssh_keys is defined
