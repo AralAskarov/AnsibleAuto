@@ -1,0 +1,65 @@
+---
+- name: Install Nomad and configure
+  hosts: cloudserver
+  become: true
+
+  vars:
+    nomad_version: "1.9.2"
+    nomad_data_dir: "/home/aralocean/nomad-ansible/tmp/nomad"
+    nomad_bind_addr: "0.0.0.0"
+    nomad_log_level: "DEBUG"
+    nomad_datacenter: "kbtu"
+    nomad_download_url: "https://releases.hashicorp.com/nomad/{{ nomad_version }}/nomad_{{ nomad_version }}_linux_amd64.zip"
+    nomad_bin_path: "/usr/local/bin/nomad"
+    nomad_config_dir: "/etc/nomad.d"
+
+  tasks:
+    - name: Download Nomad binary
+      get_url:
+        url: "{{ nomad_download_url }}"
+        dest: "/tmp/nomad_{{ nomad_version }}_linux_amd64.zip"
+        mode: '0644'
+
+    - name: Unzip Nomad binary
+      unarchive:
+        src: "/tmp/nomad_{{ nomad_version }}_linux_amd64.zip"
+        dest: "/usr/local/bin"
+        remote_src: yes
+      notify: Reload systemd
+
+    - name: Ensure nomad binary is executable
+      file:
+        path: "{{ nomad_bin_path }}"
+        mode: '0755'
+
+    - name: Create nomad config directory
+      file:
+        path: "{{ nomad_config_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Template the nomad.hcl
+      template:
+        src: "nomad.hcl.j2"
+        dest: "{{ nomad_config_dir }}/nomad.hcl"
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Install systemd unit for Nomad
+      copy:
+        src: "nomad.service"
+        dest: "/etc/systemd/system/nomad.service"
+        mode: '0644'
+      notify: Reload systemd
+
+    - name: Start and enable Nomad service
+      systemd:
+        name: nomad
+        enabled: yes
+        state: started
+
+  handlers:
+    - name: Reload systemd
+      systemd:
+        daemon_reload: yes

@@ -1,0 +1,19 @@
+data_dir = "{{ nomad_data_dir }}"
+bind_addr = "{{ nomad_bind_addr }}"
+
+server {
+  enabled = true
+  bootstrap_expect = 1
+}
+
+log_level = "{{ nomad_log_level }}"
+datacenter = "{{ nomad_datacenter }}"
+
+client {
+  enabled = true
+  servers = ["127.0.0.1:4647"]
+
+  options {
+    "driver.raw_exec.enable" = "true"
+  }
+}
