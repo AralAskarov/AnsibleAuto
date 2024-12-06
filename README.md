@@ -1,4 +1,4 @@
-#Task #1. Remote user manager
+## Task #1. [Remote user manager](task1/README.md)
 Prepare Ansible playbook(s) to manage the creation and deletion of users and their
 access to a remote server.
 User creation - the playbook should accept input parameters, including
@@ -14,7 +14,7 @@ or saved to a specified location for future use.
 Playbook should be robust, handling edge cases (e.g., attempting to create an
 existing user).
 
-#Task #2. Install Nomad
+## Task #2. [Install Nomad](task2/README.md)
 Automate the process of installing and configuring HashiCorp Nomad using Ansible.
 Use a Jinja2 template to dynamically generate the nomad.hcl configuration file
 based on node-specific variables.
